@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>아이디어 공유</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f7f9fc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      text-align: center;
+      overflow-y: auto;
+      max-height: calc(100vh - 80px);
+    }
+    h1 {
+      font-size: 24px;
+      color: #333;
+      margin-bottom: 40px;
+    }
+    .input-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    input, textarea {
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      font-size: 16px;
+      width: 100%;
+      transition: all 0.3s ease;
+    }
+    input:focus, textarea:focus {
+      border-color: #3498db;
+      outline: none;
+      box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+    }
+    .add-button {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 12px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.3s;
+    }
+    .add-button:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+    }
+    .card {
+      padding: 20px;
+      background-color: #ffffff;
+      border-radius: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    .card-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 10px;
+      margin-top: 10px;
+    }
+    .card-content {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+    .card-footer {
+      font-size: 14px;
+      color: #888;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      width: 80%;
+      max-width: 400px;
+      padding: 20px;
+      display: none;
+      z-index: 100;
+      overflow: auto;
+    }
+    .popup-header {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .popup-content {
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+    .like-button {
+      background: none;
+      border: none;
+      color: #e74c3c;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .close-button {
+      padding: 5px;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    @media screen and (max-width: 768px) {
+      .container {
+        padding: 20px;
+      }
+      .add-button {
+        font-size: 14px;
+        padding: 10px;
+      }
+      h1 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>아이디어 공유</h1>
+    <div class="input-container">
+      <input type="text" id="title" placeholder="제목 입력">
+      <textarea id="idea" placeholder="아이디어 입력"></textarea>
+      <button class="add-button" id="add-button">추가</button>
+    </div>
+    <div id="idea-list"></div>
+  </div>
+
+  <!-- 팝업창 -->
+  <div class="popup" id="popup">
+    <div class="popup-header" id="popup-title"></div>
+    <div class="popup-content" id="popup-content"></div>
+    <button class="like-button" id="like-button">
+      <i class="fas fa-heart"></i> <span id="like-count">0</span>
+    </button>
+    <button class="close-button" onclick="closePopup()">닫기</button>
+  </div>
+
+  <!-- Firebase Configuration -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAm2_Z3388L4_kzxhUNOtieglWGU6BoA0A",
+      authDomain: "today-f9138.firebaseapp.com",
+      projectId: "today-f9138",
+      storageBucket: "today-f9138.appspot.com",
+      messagingSenderId: "198671443737",
+      appId: "1:198671443737:web:7ce1e40f6a7ffef7214788",
+      measurementId: "G-ST3JSGCL5C"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const ideasCollection = collection(db, "ideas");
+
+    let currentIdeaId = "";
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Function to add idea
+      document.getElementById('add-button').addEventListener('click', async function() {
+        const title = document.getElementById('title').value;
+        const idea = document.getElementById('idea').value;
+        const date = new Date().toLocaleDateString();
+
+        if (title && idea) {
+          // Add idea to Firestore
+          await addDoc(ideasCollection, { title, idea, date, likes: 0 });
+          document.getElementById('title').value = '';
+          document.getElementById('idea').value = '';
+        }
+      });
+
+      // Function to display ideas
+      function displayIdea(id, title, idea, date, likes) {
+        const ideaList = document.getElementById('idea-list');
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.id = id;
+        card.innerHTML = `
+          <div class="card-title">${title}</div>
+          <div class="card-content">${idea}</div>
+          <div class="card-footer">
+            <span>${date || '날짜 없음'}</span>
+            <span>좋아요: <span id="like-count-${id}">${likes !== undefined ? likes : 0}</span></span>
+          </div>
+        `;
+        card.onclick = () => openPopup(id, title, idea, likes);
+        ideaList.appendChild(card);
+      }
+
+      // Function to open popup
+      function openPopup(id, title, content, likes) {
+        currentIdeaId = id;
+        document.getElementById('popup-title').innerText = title;
+        document.getElementById('popup-content').innerText = content;
+        document.getElementById('like-count').innerText = likes;
+        document.getElementById('popup').style.display = 'block';
+      }
+
+      // Function to close popup
+      window.closePopup = function() {
+        document.getElementById('popup').style.display = 'none';
+      }
+
+      // Like button click
+      document.getElementById('like-button').addEventListener('click', async function() {
+        if (currentIdeaId) {
+          const ideaRef = doc(db, "ideas", currentIdeaId);
+          const likeCountSpan = document.getElementById('like-count');
+          const likeCount = parseInt(likeCountSpan.innerText) + 1;
+
+          await updateDoc(ideaRef, { likes: likeCount });
+          likeCountSpan.innerText = likeCount;
+          document.getElementById(`like-count-${currentIdeaId}`).innerText = likeCount;
+        }
+      });
+
+      // Real-time Firestore listener
+      onSnapshot(ideasCollection, (snapshot) => {
+        document.getElementById('idea-list').innerHTML = ''; // Clear idea list
+        snapshot.forEach((doc) => {
+          const { title, idea, date, likes } = doc.data();
+          displayIdea(doc.id, title, idea, date, likes);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
